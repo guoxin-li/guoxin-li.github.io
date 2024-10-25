@@ -1,11 +1,504 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <link rel="stylesheet" href="style.css"/>
-    </head>
-    <body>
-        <img src="https://github.com/hackclub/dinosaurs/raw/master/smart_dinosaur_docs.png">
-        <h1>Prophet Orpheus</h1>
-        <p>Coder Dino Will code for food</p>
-    </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Wheel with Split Complementary Overlay</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        #container {
+            position: relative;
+        }
+        #colorWheelCanvas, #overlayCanvas {
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .button-group {
+            margin-top: 420px; /* Position below the color wheel */
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        /* Highlighted button style */
+        .highlighted {
+            background-color: #4CAF50; /* Green background for highlight */
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <!-- Canvas for color wheel -->
+        <canvas id="colorWheelCanvas" width="400" height="400"></canvas>
+        <!-- Canvas for overlay -->
+        <canvas id="overlayCanvas" width="400" height="400"></canvas>
+    </div>
+    <div class="rotation">
+        <button id="rotateButton" onclick="rotateWheel(this)">Rotate</button>
+    </div>
+    <div class="button-group">
+        <button onclick="toggleComplementaryOverlay(this)">Complementary</button>
+        <button onclick="toggleRectangleTetradicOverlay(this)">Rectangle Tetradic</button>
+        <button onclick="toggleSplitComplementaryOverlay(this)">Split Complementary</button>
+        <button onclick="toggleSquareTetradicOverlay(this)">Square Tetradic</button>
+        <button onclick="toggleTriadicOverlay(this)">Triadic</button>
+        <button onclick="toggleMonochromaticOverlay(this)">Monochromatic</button>
+        <button onclick="toggleAnalogousOverlay(this)">Analogous</button>
+    </div>
+
+    <script>
+        const colorWheelCanvas = document.getElementById("colorWheelCanvas");
+        const overlayCanvas = document.getElementById("overlayCanvas");
+        const ctx = colorWheelCanvas.getContext("2d");
+        const overlayCtx = overlayCanvas.getContext("2d");
+        const radius = colorWheelCanvas.width / 2;
+        const centerX = radius;
+        const centerY = radius;
+
+        // Define the 12 colors and their names
+        const colorData = [
+            { color: "rgb(255, 0, 0)", name: "Red" },            // Primary
+            { color: "rgb(255, 127, 0)", name: "Red-Orange" },    // Tertiary
+            { color: "rgb(255, 165, 0)", name: "Orange" },        // Secondary
+            { color: "rgb(255, 215, 0)", name: "Yellow-Orange" }, // Tertiary
+            { color: "rgb(255, 255, 0)", name: "Yellow" },        // Primary
+            { color: "rgb(173, 255, 47)", name: "Yellow-Green" }, // Tertiary
+            { color: "rgb(0, 128, 0)", name: "Green" },           // Secondary
+            { color: "rgb(0, 128, 127)", name: "Blue-Green" },    // Tertiary
+            { color: "rgb(0, 0, 255)", name: "Blue" },            // Primary
+            { color: "rgb(75, 0, 130)", name: "Blue-Violet" },    // Tertiary
+            { color: "rgb(128, 0, 128)", name: "Purple" },        // Secondary
+            { color: "rgb(180, 0, 130)", name: "Red-Violet" }     // Tertiary
+        ];
+
+        const numSegments = colorData.length;
+        const angleStep = (2 * Math.PI) / numSegments;
+        let rotationAngle = Math.PI / 12; // Start with a 15-degree rotation
+        let showOverlay = false;
+        let showSplitOverlay = false;
+        let showRectangleTetradicOverlay = false;
+        let showSquareTetradicOverlay = false;
+        let showTriadicOverlay = false;
+        let showMonochromaticOverlay = false;
+        let showAnalogousOverlay = false;
+
+        // Function to draw the color wheel with labels
+        function drawColorWheel() {
+            ctx.clearRect(0, 0, colorWheelCanvas.width, colorWheelCanvas.height); // Clear canvas
+            ctx.save(); // Save the current canvas state
+            ctx.translate(centerX, centerY); // Move to the center of the canvas
+            ctx.rotate(rotationAngle); // Rotate the canvas by the initial offset
+            ctx.translate(-centerX, -centerY); // Move back to the top-left
+
+            for (let i = 0; i < numSegments; i++) {
+                const startAngle = i * angleStep;
+                const endAngle = startAngle + angleStep;
+                const color = colorData[i].color;
+                const name = colorData[i].name;
+
+                // Set the color for each segment
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius - 20, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+
+                // Draw the color name outside the segment
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + angleStep / 2); // Rotate text with segment
+                ctx.translate(radius - 10, 0); // Position text closer to edge
+                ctx.rotate(Math.PI / 2); // Rotate text to align outward
+                ctx.fillStyle = "black";
+                ctx.font = "14px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(name, 0, 5); // Adjust vertical alignment
+                ctx.restore();
+            }
+
+            ctx.restore(); // Restore the canvas to its original state
+        }
+
+        // Rotate the wheel by updating the rotation angle and redrawing
+        function rotateWheel() {
+            rotationAngle += Math.PI / 6; // Rotate by 30 degrees (1/12 of a circle)
+            drawColorWheel();
+        }
+
+        // Draw complementary overlay (fixed, does not rotate)
+        function drawComplementaryOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay canvas
+
+            overlayCtx.fillStyle = "rgba(0, 0, 0, 0.85)"; // Set overlay color
+
+            // Draw full circle overlay
+            overlayCtx.beginPath();
+            overlayCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            overlayCtx.fill();
+
+            // Cut out top and bottom segments for complementary colors
+            overlayCtx.globalCompositeOperation = 'destination-out';
+
+            // Top complementary color segment (fixed)
+            const topAngle = Math.PI / 2;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topAngle - angleStep / 2, topAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Bottom complementary color segment (fixed)
+            const bottomAngle = (3 * Math.PI) / 2;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomAngle - angleStep / 2, bottomAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Reset composite mode
+            overlayCtx.globalCompositeOperation = 'source-over';
+        }
+
+        // Draw RectangleTetradic overlay
+        function drawSplitRectangleTetradicOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay canvas
+
+            overlayCtx.fillStyle = "rgba(0, 0, 0, 0.85)"; // Set overlay color
+
+            // Draw full circle overlay
+            overlayCtx.beginPath();
+            overlayCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            overlayCtx.fill();
+
+            // Cut out RectangleTetradic segments adjacent to top and bottom
+            overlayCtx.globalCompositeOperation = 'destination-out';
+
+            // Top left and right RectangleTetradic segments
+            const topLeftAngle = Math.PI / 2 - angleStep;
+            const topRightAngle = Math.PI / 2 + angleStep;
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topLeftAngle - angleStep / 2, topLeftAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topRightAngle - angleStep / 2, topRightAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Bottom left and right RectangleTetradic segments
+            const bottomLeftAngle = (3 * Math.PI) / 2 - angleStep;
+            const bottomRightAngle = (3 * Math.PI) / 2 + angleStep;
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomLeftAngle - angleStep / 2, bottomLeftAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomRightAngle - angleStep / 2, bottomRightAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Reset composite mode
+            overlayCtx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawSplitComplementaryOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay canvas
+
+            overlayCtx.fillStyle = "rgba(0, 0, 0, 0.85)"; // Set overlay color
+
+            // Draw full circle overlay
+            overlayCtx.beginPath();
+            overlayCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            overlayCtx.fill();
+
+            // Cut out split complementary segments adjacent to top and bottom
+            overlayCtx.globalCompositeOperation = 'destination-out';
+
+            // Top  split complementary segments
+            const topAngle = Math.PI / 2;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topAngle - angleStep / 2, topAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Bottom left and right split complementary segments
+            const bottomLeftAngle = (3 * Math.PI) / 2 - angleStep;
+            const bottomRightAngle = (3 * Math.PI) / 2 + angleStep;
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomLeftAngle - angleStep / 2, bottomLeftAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomRightAngle - angleStep / 2, bottomRightAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Reset composite mode
+            overlayCtx.globalCompositeOperation = 'source-over';
+        }
+
+
+        function drawSquareTetradicOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay canvas
+
+            overlayCtx.fillStyle = "rgba(0, 0, 0, 0.85)"; // Set overlay color
+
+            // Draw full circle overlay
+            overlayCtx.beginPath();
+            overlayCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            overlayCtx.fill();
+
+            // Cut out SquareTetradic segments adjacent to top and bottom
+            overlayCtx.globalCompositeOperation = 'destination-out';
+
+            // Top  SquareTetradic complementary segments
+            const topAngle = Math.PI / 2;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topAngle - angleStep / 2 -angleStep, topAngle + angleStep / 2 - angleStep);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topAngle + angleStep / 2 + angleStep, topAngle + angleStep / 2 + 2 *angleStep);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Bottom SquareTetradic complementary segments
+            const bottomLeftAngle = (3 * Math.PI) / 2 - angleStep;
+            const bottomRightAngle = (3 * Math.PI) / 2 + angleStep;
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomLeftAngle - angleStep / 2, bottomLeftAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomRightAngle - angleStep / 2 + angleStep, bottomRightAngle + angleStep / 2 + angleStep);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Reset composite mode
+            overlayCtx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawTriadicOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay canvas
+
+            overlayCtx.fillStyle = "rgba(0, 0, 0, 0.85)"; // Set overlay color
+
+            // Draw full circle overlay
+            overlayCtx.beginPath();
+            overlayCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            overlayCtx.fill();
+
+            // Cut out Triadic segments adjacent to top and bottom
+            overlayCtx.globalCompositeOperation = 'destination-out';
+
+            // Top Triadic complementary segments
+            const topAngle = Math.PI / 2;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topAngle - angleStep / 2, topAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Bottom left and right Triadic segments
+            const bottomLeftAngle = (3 * Math.PI) / 2 - angleStep;
+            const bottomRightAngle = (3 * Math.PI) / 2 + angleStep;
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomLeftAngle - angleStep / 2 - angleStep, bottomLeftAngle + angleStep / 2 - angleStep);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, bottomRightAngle - angleStep / 2 + angleStep, bottomRightAngle + angleStep / 2 + angleStep);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Reset composite mode
+            overlayCtx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawMonochromaticOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay canvas
+
+            overlayCtx.fillStyle = "rgba(0, 0, 0, 0.85)"; // Set overlay color
+
+            // Draw full circle overlay
+            overlayCtx.beginPath();
+            overlayCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            overlayCtx.fill();
+
+            // Cut out Monochromatic segments adjacent to top and bottom
+            overlayCtx.globalCompositeOperation = 'destination-out';
+
+            // Top Monochromatic complementary segments
+            const topAngle = Math.PI * 1.5;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topAngle - angleStep / 2, topAngle + angleStep / 2);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Reset composite mode
+            overlayCtx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawAnalogousOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay canvas
+
+            overlayCtx.fillStyle = "rgba(0, 0, 0, 0.85)"; // Set overlay color
+
+            // Draw full circle overlay
+            overlayCtx.beginPath();
+            overlayCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            overlayCtx.fill();
+
+            // Cut out Analogous segments adjacent to top and bottom
+            overlayCtx.globalCompositeOperation = 'destination-out';
+
+            // Top Analogous complementary segments
+            const topAngle = Math.PI * 1.5;
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(centerX, centerY);
+            overlayCtx.arc(centerX, centerY, radius, topAngle - angleStep / 2 - angleStep, topAngle + angleStep / 2 + angleStep);
+            overlayCtx.closePath();
+            overlayCtx.fill();
+
+            // Reset composite mode
+            overlayCtx.globalCompositeOperation = 'source-over';
+        }
+
+
+        // Toggle complementary overlay on/off
+        function toggleComplementaryOverlay(button) {
+            showOverlay = !showOverlay;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay
+            if (showOverlay) {
+                drawComplementaryOverlay();
+                cleanOverlay() // Ensure only one overlay is active at a time
+                showOverlay = !showOverlay;
+            }
+            highlightButton(button);
+        }
+
+        // Toggle RectangleTetradic overlay on/off
+        function toggleRectangleTetradicOverlay(button) {
+            showRectangleTetradicOverlay= !showRectangleTetradicOverlay;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay
+            if (showRectangleTetradicOverlay) {
+                drawSplitRectangleTetradicOverlay();
+                cleanOverlay();
+                showRectangleTetradicOverlay= !showRectangleTetradicOverlay; // Ensure only one overlay is active at a time
+            }
+            highlightButton(button);
+        }
+
+        function toggleSplitComplementaryOverlay(button) {
+            showSplitOverlay = !showSplitOverlay;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay
+            if (showSplitOverlay) {
+                drawSplitComplementaryOverlay();
+                cleanOverlay()// Ensure only one overlay is active at a time
+                highlightButton(button);
+                showSplitOverlay = !showSplitOverlay;
+            }
+        }
+        function toggleSquareTetradicOverlay(button) {
+            showSquareTetradicOverlay = !showSquareTetradicOverlay;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay
+            if (showSquareTetradicOverlay) {
+                drawSquareTetradicOverlay();
+                cleanOverlay() // Ensure only one overlay is active at a time
+                showSquareTetradicOverlay = !showSquareTetradicOverlay;
+            }
+            highlightButton(button);
+        }
+
+        function toggleTriadicOverlay(button) {
+            showTriadicOverlay = !showTriadicOverlay;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay
+            if (showTriadicOverlay) {
+                drawTriadicOverlay();
+                cleanOverlay() // Ensure only one overlay is active at a time
+                showTriadicOverlay = !showTriadicOverlay;
+            }
+            highlightButton(button);
+        }
+
+        function toggleMonochromaticOverlay(button) {
+            showMonochromaticOverlay = !showMonochromaticOverlay;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay
+            if (showMonochromaticOverlay) {
+                drawMonochromaticOverlay();
+                cleanOverlay() // Ensure only one overlay is active at a time
+                showMonochromaticOverlay = !showMonochromaticOverlay;
+            }
+            highlightButton(button);
+        }
+
+        function toggleAnalogousOverlay(button) {
+            showAnalogousOverlay = !showAnalogousOverlay;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear overlay
+            if (showAnalogousOverlay) {
+                drawAnalogousOverlay();
+                cleanOverlay() // Ensure only one overlay is active at a time
+                showAnalogousOverlay = !showAnalogousOverlay;
+            }
+            highlightButton(button);
+        }
+        function highlightButton(button) {
+            document.querySelectorAll(".button-group button").forEach(btn => btn.classList.remove("highlighted"));
+            button.classList.add("highlighted");
+        }
+        function cleanOverlay(){
+            showOverlay = false;
+            showSplitOverlay = false;
+            showRectangleTetradicOverlay = false;
+            showSquareTetradicOverlay = false;
+            showTriadicOverlay = false;
+            showMonochromaticOverlay = false;
+            showAnalogousOverlay = false;
+        }
+        // Initial drawing
+        drawColorWheel();
+    </script>
+</body>
 </html>
